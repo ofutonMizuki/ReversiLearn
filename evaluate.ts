@@ -38,7 +38,7 @@ export class Eval {
                 this.cb[i].push(Number(text[i * 256 + j + 192]));
             }
         }
-        console.log(this.board1)
+        //console.log(this.board1)
     }
 
     async write(path: string) {

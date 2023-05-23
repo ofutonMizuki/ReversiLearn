@@ -122,6 +122,7 @@ export class Board {
     white: BitBoard;
     color: number;
     posBoard: BitBoard;
+    score: number;
 
     constructor(board?: Board | { black: BitBoard, white: BitBoard, color: number, posBoard: BitBoard }) {
         if (board == undefined) {

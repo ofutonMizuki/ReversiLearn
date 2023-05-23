@@ -5,22 +5,27 @@ import { search } from './search';
 
 const evaluate = new Eval();
 
-function game(board: Board, gamemode: { black: number, white: number }, move: Position): Count {
+function game(_board: Board, gamemode: { black: number, white: number }, move: Position): {b: Board[], c: Count} {
     //置ける場所を求める(実際はすでに求められてると思うけれど念の為)
-    board.getPosBoard();
+    _board.getPosBoard();
 
     //もしパスならターンチェンジ
-    if (board.isPass()) {
-        board.changeColor();
+    if (_board.isPass()) {
+        _board.changeColor();
 
         //それでもパスならゲーム終了
-        if (board.isPass()) {
+        if (_board.isPass()) {
 
             //盤面の石の数を数えて返す
-            let result = board.count();
-            return result;
+            let result = _board.count();
+            let b = new Array();
+            _board.score = _board.color == BLACK ? result.black - result.white : result.white - result.black;
+            b.push(_board);
+            return {b: b, c: result};
         }
     }
+    
+    let board = _board.clone();
 
     //プレイヤーのゲームモードによって分岐する
     switch ((board.color == BLACK) ? gamemode.black : gamemode.white) {
@@ -32,7 +37,10 @@ function game(board: Board, gamemode: { black: number, white: number }, move: Po
             //
             move.x = result.position.x;
             move.y = result.position.y;
-            console.log(move)
+            
+            _board.score = result.score;
+
+            //console.log(move)
             break;
 
         //ランダムプレイヤー
@@ -49,7 +57,9 @@ function game(board: Board, gamemode: { black: number, white: number }, move: Po
     board.reverse(move);
 
     //game()を再帰呼び出しする
-    return game(board, gamemode, move);
+    let g = game(board, gamemode, move);
+    g.b.unshift(_board);
+    return g;
 }
 
 async function main() {
@@ -70,7 +80,7 @@ async function main() {
     //ゲームモードの設定
     let gamemode = { black: COM_PLAYER, white: COM_PLAYER };
 
-    console.log(game(board, gamemode, move));
+    console.dir(game(board, gamemode, move), { depth: null });
 }
 
 main();
