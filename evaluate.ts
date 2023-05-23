@@ -12,6 +12,24 @@ export class Eval {
         this.board2 = new Array();
         this.space = new Array();
         this.cb = new Array();
+        for (let i = 0; i < 65; i++) {
+            this.board1.push(new Array());
+            this.board2.push(new Array());
+            this.space.push(new Array());
+            this.cb.push(new Array());
+            for (let j = 0; j < 64; j++) {
+                this.board1[i].push(0);
+            }
+            for (let j = 0; j < 64; j++) {
+                this.board2[i].push(0);
+            }
+            for (let j = 0; j < 64; j++) {
+                this.space[i].push(0);
+            }
+            for (let j = 0; j < 64; j++) {
+                this.cb[i].push(0);
+            }
+        }
     }
 
     async read(path: string) {
