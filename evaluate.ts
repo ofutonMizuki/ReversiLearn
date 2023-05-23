@@ -1,5 +1,6 @@
 import fetch from 'node-fetch';
 import { BLACK, BitBoard, Board } from './board';
+import fs from 'fs';
 
 export class Eval {
     board1: number[][];
@@ -18,8 +19,7 @@ export class Eval {
         this.board2 = new Array();
         this.space = new Array();
         this.cb = new Array();
-        let response = await fetch(path);
-        let text = (await response.text()).split('\n');;
+        let text = fs.readFileSync(path).toString().split('\n');;
         for (let i = 0; i < 65; i++) {
             this.board1.push(new Array());
             this.board2.push(new Array());
@@ -39,6 +39,30 @@ export class Eval {
             }
         }
         console.log(this.board1)
+    }
+
+    async write(path: string) {
+        let data: string = '';
+        for (let i = 0; i < 65; i++) {
+            for (let j = 0; j < 64; j++) {
+                data += this.board1[i][j].toString();
+                data += '\n';
+            }
+            for (let j = 0; j < 64; j++) {
+                data += this.board2[i][j].toString();
+                data += '\n';
+            }
+            for (let j = 0; j < 64; j++) {
+                data += this.space[i][j].toString();
+                data += '\n';
+            }
+            for (let j = 0; j < 64; j++) {
+                data += this.cb[i][j].toString();
+                data += '\n';
+            }
+        }
+
+        fs.writeFileSync(path, data);
     }
 
     _eval(_board1: BitBoard, _board2: BitBoard, _cb: BitBoard) {

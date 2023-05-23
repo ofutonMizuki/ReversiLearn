@@ -53,7 +53,8 @@ function game(board: Board, gamemode: { black: number, white: number }, move: Po
 }
 
 async function main() {
-    await evaluate.read("https://othello.ofuton.net/eval/eval");
+    await evaluate.read('./eval.dat');
+    await evaluate.write('./eval.dat');
     init_board_js();
     let board = new Board();
     let move = { x: -1, y: -1 };
@@ -67,7 +68,7 @@ async function main() {
     // });
 
     //ゲームモードの設定
-    let gamemode = { black: RANDOM_PLAYER, white: RANDOM_PLAYER };
+    let gamemode = { black: COM_PLAYER, white: COM_PLAYER };
 
     console.log(game(board, gamemode, move));
 }

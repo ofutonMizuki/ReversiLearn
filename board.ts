@@ -123,7 +123,7 @@ export class Board {
     color: number;
     posBoard: BitBoard;
 
-    constructor(board?: Board) {
+    constructor(board?: Board | { black: BitBoard, white: BitBoard, color: number, posBoard: BitBoard }) {
         if (board == undefined) {
             this.black = new BitBoard(DEFAULT_BLACK_BOARD);
             this.white = new BitBoard(DEFAULT_WHITE_BOARD);
