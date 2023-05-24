@@ -53,7 +53,7 @@ function createNextBoard(board: tBoard, position: Position) {
 
 export function search(_board: Board, maxDepth: number, evaluate: Eval) {
     let board = new tBoard(_board);
-    alphaBeta(board, maxDepth - 1, board.color, evaluate, -INFINITE_SCORE, INFINITE_SCORE, true);
+    alphaBeta(board, maxDepth - 1, board.color, evaluate, -INFINITE_SCORE, INFINITE_SCORE, false);
 
     return {
         position: board.position,

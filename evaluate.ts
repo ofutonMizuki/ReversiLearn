@@ -108,6 +108,31 @@ export class Eval {
         return r;
     }
 
+    learn(_board1: BitBoard, _board2: BitBoard, _cb: BitBoard, t: number, eta: number) {
+        let n = _board1.count() + _board2.count();
+        let board1 = _board1.board, board2 = _board2.board;
+        let cb = _cb.board;
+        let score = this._eval(_board1, _board2, _cb);
+        let loss = score - t;
+        for (let i = 0; i < 64; i++) {
+            if (board1 & 0x01n) {
+                this.board1[n][i] -= loss * eta;
+            }
+            else if (board2 & 0x01n) {
+                this.board2[n][i] -= loss * eta;
+            }
+            else {
+                this.space[n][i] -= loss * eta;
+            }
+            if (cb & 0x01n) {
+                this.cb[n][i] -= loss * eta;
+            }
+            board1 >>= 1n;
+            board2 >>= 1n;
+            cb >>= 1n;
+        }
+    }
+
     evaluate(board: Board, color: number) {
         let board1: BitBoard, board2: BitBoard;
 

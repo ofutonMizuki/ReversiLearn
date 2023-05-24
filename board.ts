@@ -130,6 +130,7 @@ export class Board {
             this.white = new BitBoard(DEFAULT_WHITE_BOARD);
             this.color = BLACK;
             this.posBoard = new BitBoard();
+            this.score = 0;
 
             this.getPosBoard();
         }
@@ -138,6 +139,7 @@ export class Board {
             this.white = board.white.clone();
             this.color = board.color;
             this.posBoard = board.posBoard.clone();
+            this.score = 0;
         }
     }
 
