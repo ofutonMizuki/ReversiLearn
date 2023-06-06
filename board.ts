@@ -124,7 +124,7 @@ export class Board {
     posBoard: BitBoard;
     score: number;
 
-    constructor(board?: Board | { black: BitBoard, white: BitBoard, color: number, posBoard: BitBoard }) {
+    constructor(board?: Board | { black: BitBoard, white: BitBoard, color: number, posBoard: BitBoard, score: number }) {
         if (board == undefined) {
             this.black = new BitBoard(DEFAULT_BLACK_BOARD);
             this.white = new BitBoard(DEFAULT_WHITE_BOARD);
@@ -139,7 +139,7 @@ export class Board {
             this.white = board.white.clone();
             this.color = board.color;
             this.posBoard = board.posBoard.clone();
-            this.score = 0;
+            this.score = board.score;
         }
     }
 

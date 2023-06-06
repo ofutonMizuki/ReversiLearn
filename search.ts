@@ -53,7 +53,7 @@ function createNextBoard(board: tBoard, position: Position) {
 
 export function search(_board: Board, maxDepth: number, evaluate: Eval) {
     let board = new tBoard(_board);
-    alphaBeta(board, maxDepth - 1, board.color, evaluate, -INFINITE_SCORE, INFINITE_SCORE, false);
+    alphaBeta(board, maxDepth - 1, board.color, evaluate, -INFINITE_SCORE, INFINITE_SCORE, true);
 
     return {
         position: board.position,
@@ -69,6 +69,7 @@ function alphaBeta(board: tBoard, maxDepth: number, color: number, evaluate: Eva
 
         //それでもパスならゲーム終了
         if (board.isPass()) {
+            board.changeColor();
 
             //盤面の石の数を数える
             let result = board.count();
@@ -81,13 +82,20 @@ function alphaBeta(board: tBoard, maxDepth: number, color: number, evaluate: Eva
                 board.score = result.white - result.black;
             }
 
+            board.score /= 64;
+
             return board.score;
         }
     }
 
     //もし探索上限に達したら評価値を求める
     if (maxDepth < board.n) {
-        board.score = evaluate.evaluate(board, color);
+        if(moFlag == false){
+            //return board.score = evaluate.evaluate(board, color);
+        }
+        //board.score = evaluate.evaluate(board, color) / 64;
+        board.score = evaluate.runPerceptron(board, color);
+        //board.score /= 4;
         //board.score = Math.random();
 
         return board.score;

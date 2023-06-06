@@ -1,77 +1,16 @@
 const MANUAL_PLAYER = 1, COM_PLAYER = 2, RANDOM_PLAYER = 3;
 import { Eval } from './evaluate';
 import { init_board_js, BitBoard, Board, BLACK, WHITE, Count, Position } from './board';
-import { search } from './search';
+const { setTimeout } = require('timers/promises');
 
-const evaluate = new Eval();
-
-function game(_board: Board, depth: number, gamemode: { black: number, white: number }, move: Position): { b: Board[], c: Count } {
-    //置ける場所を求める(実際はすでに求められてると思うけれど念の為)
-    _board.getPosBoard();
-
-    //もしパスならターンチェンジ
-    if (_board.isPass()) {
-        _board.changeColor();
-
-        //それでもパスならゲーム終了
-        if (_board.isPass()) {
-            _board.changeColor();
-
-            //盤面の石の数を数えて返す
-            let result = _board.count();
-            let b = new Array();
-            _board.score = _board.color == BLACK ? result.black - result.white : result.white - result.black;
-            b.push(_board);
-            return { b: b, c: result };
-        }
-    }
-
-    let board = _board.clone();
-    let count = board.count();
-    let mode = (board.color == BLACK) ? gamemode.black : gamemode.white;
-    mode = count.black + count.white < 14 ? RANDOM_PLAYER : mode;
-    //プレイヤーのゲームモードによって分岐する
-    switch (mode) {
-        //コンピュータープレイヤー
-        case COM_PLAYER:
-            //思考結果が返ってくるまで待つ
-            let result = search(board.clone(), depth, evaluate);
-
-            //
-            move.x = result.position.x;
-            move.y = result.position.y;
-
-            _board.score = result.score;
-
-            //console.log(move)
-            break;
-
-        //ランダムプレイヤー
-        case RANDOM_PLAYER:
-            let rresult = search(board.clone(), depth, evaluate);
-            _board.score = rresult.score;
-            const npList = board.getNextPositionList();
-            move = npList[Math.floor(Math.random() * npList.length)].p;
-            break;
-        default:
-            break;
-    }
-
-    //石を置いてひっくり返す
-    board.reverse(move);
-
-    //game()を再帰呼び出しする
-    let g = game(board, depth, gamemode, move);
-    g.b.unshift(_board);
-    return g;
-}
+import { Worker } from "worker_threads";
 
 async function main() {
+    const evaluate = new Eval();
     await evaluate.read('./eval.dat');
     //await evaluate.write('./eval.dat');
-    init_board_js();
-    let board = new Board();
-    let move = { x: -1, y: -1 };
+    evaluate.readP('./evalP.dat');
+    evaluate.writeP('./evalP.dat');
 
     //探索部のテスト用初期値 
     // board = new Board({
@@ -81,32 +20,118 @@ async function main() {
     //     posBoard: new BitBoard()
     // });
 
-    for (let j = 0; j < 1; j++) {
-        //ゲームモードの設定
-        let gamemode = { black: COM_PLAYER, white: COM_PLAYER };
-        let result = game(board.clone(), 2 + (j % 2), gamemode, move);
-        for (let i = 0; i < result.b.length; i++) {
-            let board1: BitBoard, board2: BitBoard, score: number;
-            if (result.b[i].color == BLACK) {
-                board1 = result.b[i].black;
-                board2 = result.b[i].white;
-                score = result.b[i].score + (result.c.black - result.c.white);
-                //console.log(`result: ${result.c.black - result.c.white}, score: ${result.b[i].score}`)
-            }
-            else {
-                board1 = result.b[i].white;
-                board2 = result.b[i].black;
-                score = result.b[i].score + (result.c.white - result.c.black);
-                //console.log(`result: ${result.c.white - result.c.black}, score: ${result.b[i].score}`)
-            }
-
-            score /= 2;
-            evaluate.learn(board1, board2, result.b[i].getPosBoard(), score, 0.0078);
-        }
-        console.dir(result, { depth: null });
-        await evaluate.write('./eval.dat');
+    let e: number[] = new Array(65);
+    let e2: number[] = new Array(65);
+    let b = 512;
+    for (let j = 0; j < 65; j++) {
+        e[j] = 0;
     }
-    await evaluate.write('./eval.dat');
+    for (let k = 0; k < 16384; k++) {
+
+        //マルチスレッド関係
+        const workers: Worker[] = new Array();
+        const nThread: number = 6;
+        //Worker作成
+        for (let i = 0; i < nThread; i++) {
+            workers.push(new Worker("./game.ts", { workerData: { evaluate: evaluate } }));
+        }
+        //Worker周り初期化
+        let results: { b: Board[], c: Count }[] = new Array();
+        let workersEndFlag = 0;
+        //局面生成
+        for (let i = 0; i < nThread; i++) {
+            workers[i].on('message', result => {
+                //console.dir(result, { depth: null });
+                results.push(result);
+                console.log(results.length)
+                if (results.length > b - nThread) {
+                    workersEndFlag |= (0x01 << i);
+                    console.log(workersEndFlag)
+                    workers[i].terminate();
+                }
+                else {
+                    workers[i].postMessage({ depth: 3 })
+                }
+            })
+        }
+        for (let i = 0; i < nThread; i++) {
+            workers[i].postMessage({ depth: 3 })
+        }
+
+        //生成終了まで待つ
+        while (1) {
+            await setTimeout(100);
+            if (workersEndFlag == ((1 << nThread) - 1)) {
+                break;
+            }
+        }
+
+        //学習
+        for (let j = 0; j < b; j++) {
+            let result = results[j];
+            //console.dir(result, { depth: null });
+            for (let i = 0; i < result.b.length; i++) {
+
+                let board1: BitBoard, board2: BitBoard, score: number;
+                const r = result.c.black - result.c.white;
+                const s = result.b[i].score * 64 * 1000;
+
+                result.b[i] = new Board({
+                    black: new BitBoard(result.b[i].black.board),
+                    white: new BitBoard(result.b[i].white.board),
+                    color: result.b[i].color,
+                    posBoard: new BitBoard(result.b[i].posBoard.board),
+                    score: result.b[i].score
+                })
+                const pScore = evaluate.runPerceptron(result.b[i], result.b[i].color) * 64;
+                const eScore = evaluate.evaluate(result.b[i], result.b[i].color);
+                if (result.b[i].color == BLACK) {
+                    board1 = result.b[i].black;
+                    board2 = result.b[i].white;
+                    score = (result.c.black - result.c.white);
+                }
+                else {
+                    board1 = result.b[i].white;
+                    board2 = result.b[i].black;
+                    score = (result.c.white - result.c.black);
+                }
+                console.log(`score:${("     " + Math.floor(s)).substr(-6)}, pScore:${("     " + Math.floor(pScore * 1000)).substr(-6)}, eScore:${("     " + Math.floor(eScore * 1000)).substr(-6)}, s:${("     " + score).substr(-5)}`)
+
+                let count = result.b[i].count();
+
+                if (j < b * (7 / 8)) {
+                    for (let c = 0; c < 4; c++) {
+                        //evaluate.learn(board1, board2, result.b[i].getPosBoard(), score / 2, 0.01);
+                        evaluate.backPropagation(board1.rotate(), board2.rotate(), result.b[i].getPosBoard().rotate().board, ((score / 64)), 0.03);
+                        //evaluate.backPropagation(board1.rotate(), board2.rotate(), result.b[i].getPosBoard().rotate().board, (result.b[i].score + (score / 64)) / 2, 0.03);
+                        //evaluate.backPropagation(board1.rotate(), board2.rotate(), result.b[i].getPosBoard().rotate().board, result.b[i].score, 0.03);
+                        //evaluate.learn(board1.rotate(), board2.rotate(), result.b[i].getPosBoard().rotate(), (result.b[i].score + (score / 64)) * 32, 0.0001);
+                    }
+                }
+
+                if (j > b * (7 / 8)) {
+                    //e[count.black + count.white] += (pScore - (result.b[i].score * 64 + score) / 2) ** 2;
+                    e[count.black + count.white] += (pScore - score) ** 2;
+                    //console.log('e')
+                }
+            }
+            console.log(`${k}.${j}`);
+            //evaluate.writeP('./evalP.dat');
+        }
+
+        for (let j = 0; j < 65; j++) {
+            e2[j] = (e[j] / (b * (1 / 8)));
+            e2[j] = Math.sqrt(e2[j]);
+            console.log(e2[j]);
+            e[j] = 0;
+        }
+
+        //let result = game(board.clone(), 3, gamemode, move)
+        //console.dir(result, { depth: null });
+        evaluate.writeP('./evalP.dat');
+        //await evaluate.write('./eval.dat');
+        console.log(`${k}`);
+    }
 }
 
 main();
