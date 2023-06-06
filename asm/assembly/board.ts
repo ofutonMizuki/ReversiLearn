@@ -35,6 +35,7 @@ export class PositionScore {
         this.s = s;
     }
 
+    @inline
     clone(): PositionScore {
         return new PositionScore(this.x, this.y, this.s);
     }
@@ -46,22 +47,26 @@ export class BitBoard {
         this.board = board;
     }
 
+    @inline
     clone(): BitBoard {
         let newBitBoard = new BitBoard();
         newBitBoard.board = this.board;
         return newBitBoard;
     }
 
+    @inline
     isSet(x: i32, y: i32): boolean {
         let m = x + y * 8;
         return ((this.board << ((m))) & 0x8000000000000000) != 0 ? true : false;
     }
 
+    @inline
     cr2bitboard(col: i32, row: i32): void // col (0..7), row (0..7) に対応するビットボード生成
     {
         this.board = 0x8000000000000000 >> ((col) + (row) * 8);
     }
 
+    @inline
     GetNumberOfTrailingZeros(x: u64): u64 {
         if (x == 0) return 64;
 
@@ -70,6 +75,7 @@ export class BitBoard {
         return table[<i32>(i)];
     }
 
+    @inline
     bitboard2cr(): PositionScore {
         let x: u64 = 63 - this.GetNumberOfTrailingZeros(this.board);
         const pos = new PositionScore(<i32>(x % 8), <i32>(Math.floor(<i32>x / 8)));
@@ -77,10 +83,12 @@ export class BitBoard {
         return pos;
     }
 
+    @inline
     isZero(): boolean {
         return this.board == 0 ? true : false;
     }
 
+    @inline
     _count(): u64 {
         let x = this.board;
         x = x - ((x >> 1) & 0x5555555555555555);
@@ -94,19 +102,18 @@ export class BitBoard {
         return (x & 0x0000007f);
     }
 
+    @inline
     count(): u32 {
-        function popcount64(x1: u32, x0: u32): u32 {
-            let t0: u32 = x1 - (x1 >>> 1 & 0x55555555);
-            t0 = (t0 & 0x33333333) + ((t0 & 0xcccccccc) >>> 2);
-            let t1 = x0 - (x0 >>> 1 & 0x55555555);
-            t0 += (t1 & 0x33333333) + ((t1 & 0xcccccccc) >>> 2);
-            t0 = (t0 & 0x0f0f0f0f) + ((t0 & 0xf0f0f0f0) >>> 4);
-            return (t0 * 0x01010101 >>> 24);
-        }
-
-        return popcount64(<u32>(this.board & 0xFFFFFFFF), (<u32>(this.board >> 32) & 0xFFFFFFFF))
+        let x1: u32 = <u32>(this.board & 0xFFFFFFFF), x0: u32 = (<u32>(this.board >> 32) & 0xFFFFFFFF);
+        let t0: u32 = x1 - (x1 >>> 1 & 0x55555555);
+        t0 = (t0 & 0x33333333) + ((t0 & 0xcccccccc) >>> 2);
+        let t1 = x0 - (x0 >>> 1 & 0x55555555);
+        t0 += (t1 & 0x33333333) + ((t1 & 0xcccccccc) >>> 2);
+        t0 = (t0 & 0x0f0f0f0f) + ((t0 & 0xf0f0f0f0) >>> 4);
+        return (t0 * 0x01010101 >>> 24);
     }
 
+    @inline
     rotate(): this {
         let b = this.board;
         b =
@@ -161,6 +168,7 @@ export class Board {
     }
 
     //指定した座標の色を教えてくれます
+    @inline
     getColor(position: PositionScore): i32 {
         let x = position.x, y = position.y;
         let black = this.black.isSet(x, y);
@@ -180,6 +188,7 @@ export class Board {
     }
 
     //ターンチェンジをしてくれます
+    @inline
     changeColor(): void {
         switch (this.color) {
             case BLACK:
@@ -197,16 +206,19 @@ export class Board {
     }
 
     //パスか確認
+    @inline
     isPass(): boolean {
         return this.posBoard.isZero();
     }
 
     //指定した座標に置けるか確認してくれます
+    @inline
     isPos(position: PositionScore): boolean {
         let x = position.x, y = position.y;
         return this.posBoard.isSet(x, y);
     }
 
+    @inline
     getNextPositionList(): PositionScore[] {
         let x = this.posBoard.clone();
         let positionList: PositionScore[] = new Array();
@@ -221,6 +233,7 @@ export class Board {
 
     //指定した座標に石をおいて反転します。
     //この関数では合法手であるかどうかのチェックは行われないので事前にisPos()でチェックしておくこと
+    @inline
     reverse(position: PositionScore): u64 {
         let x = position.x, y = position.y;
         let m = new BitBoard();
@@ -244,12 +257,14 @@ export class Board {
         return rev;
     }
 
+    @inline
     count(): Count {
         return new Count(this.black.count(), this.white.count());
     }
 
     //以下、外から使わない関数
 
+    @inline
     getPosBoard(): BitBoard {
         let board1: u64 = 0, board2: u64 = 0;
 
@@ -265,6 +280,7 @@ export class Board {
         return this.posBoard = this.genValidMove(board1, board2);
     }
 
+    @inline
     genValidMove(board1: u64, board2: u64): BitBoard {
         let i: u64;
         let blank = new BitBoard(), masked = new BitBoard(), valid = new BitBoard(), t: u64 = 0;
@@ -339,6 +355,7 @@ export class Board {
         return valid;
     }
 
+    @inline
     getRevPat(board1: u64, board2: u64, m: u64): u64 { //反転ビットマスクを取得
         let rev = new BitBoard();
         if (((board1 | board2) & m) == 0) {
